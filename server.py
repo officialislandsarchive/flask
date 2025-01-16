@@ -10,7 +10,7 @@ execution_logs = {}
 
 GITHUB_REPO = "officialislandsarchive/flask"
 GITHUB_BRANCH = "main"
-GITHUB_TOKEN = os.environ.get("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")
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
 
 API_BASE_URL = f"https://api.github.com/repos/{GITHUB_REPO}/contents/playerdata"
 
