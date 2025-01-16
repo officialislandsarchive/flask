@@ -1,8 +1,39 @@
+import os
+import json
 from flask import Flask, request, jsonify, render_template_string
 
 app = Flask(__name__)
 
-execution_logs = {}
+# Directory to store user data
+DATA_DIR = "playerdata"
+
+# Ensure the directory exists
+if not os.path.exists(DATA_DIR):
+    os.makedirs(DATA_DIR)
+
+# Helper functions to handle JSON file operations
+def load_user_data(user_id):
+    file_path = os.path.join(DATA_DIR, f"{user_id}.json")
+    if os.path.exists(file_path):
+        with open(file_path, "r") as file:
+            return json.load(file)
+    return None
+
+def save_user_data(user_id, data):
+    file_path = os.path.join(DATA_DIR, f"{user_id}.json")
+    with open(file_path, "w") as file:
+        json.dump(data, file, indent=4)
+
+def load_all_users():
+    users = {}
+    for filename in os.listdir(DATA_DIR):
+        if filename.endswith(".json"):
+            user_id = filename[:-5]  # Remove the .json extension
+            users[user_id] = load_user_data(user_id)
+    return users
+
+# Load all existing user data
+execution_logs = load_all_users()
 
 @app.route('/logExecution', methods=['POST'])
 def log_execution():
@@ -15,22 +46,29 @@ def log_execution():
         if not user_id or not username or not script_name:
             return jsonify({"status": "error", "message": "Missing userId, username, or scriptName."})
 
-        if user_id not in execution_logs:
-            execution_logs[user_id] = {'username': username, 'scripts': {}}
+        # Load or initialize the user's data
+        user_data = load_user_data(user_id) or {'username': username, 'scripts': {}}
 
-        user_data = execution_logs[user_id]['scripts']
-        if script_name in user_data:
-            user_data[script_name].update(data)
-            user_data[script_name]['executionCount'] = user_data[script_name].get('executionCount', 0) + 1
+        # Update script data
+        user_scripts = user_data['scripts']
+        if script_name in user_scripts:
+            user_scripts[script_name].update(data)
+            user_scripts[script_name]['executionCount'] = user_scripts[script_name].get('executionCount', 0) + 1
         else:
-            user_data[script_name] = {**data, 'executionCount': 1}
+            user_scripts[script_name] = {**data, 'executionCount': 1}
+
+        # Save updated user data
+        save_user_data(user_id, user_data)
+
+        # Update in-memory logs
+        execution_logs[user_id] = user_data
 
         return jsonify({"status": "success", "message": "Data logged successfully."})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
 
 
-@app.route('/dr09o8gvhve4984fh34348fh4308fjh4380fhj97gafo974tfy9o7wa4twyf798t4aw8o7rt4a87ofg974wgf8974w', methods=['GET'])
+@app.route('/logs', methods=['GET'])
 def display_logs():
     return render_template_string("""
 <!DOCTYPE html>
