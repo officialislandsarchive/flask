@@ -32,7 +32,7 @@ def log_execution():
         return jsonify({"status": "error", "message": str(e)})
 
 
-@app.route('/logs', methods=['GET'])
+@app.route('/dh4skadg4fos2dh2fo2sdhfo2sdhfsdhfuusge7793g79312', methods=['GET'])
 def display_logs():
     html_content = f"""
     <!DOCTYPE html>
