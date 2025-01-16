@@ -2,7 +2,7 @@ import os
 import json
 import base64
 import requests
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template_string
 
 app = Flask(__name__)
 
