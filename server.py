@@ -6,6 +6,8 @@ from flask import Flask, request, jsonify, render_template_string
 
 app = Flask(__name__)
 
+execution_logs = {}
+
 GITHUB_REPO = "officialislandsarchive/flask"
 GITHUB_BRANCH = "main"
 GITHUB_TOKEN = os.environ.get("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")
