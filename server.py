@@ -10,29 +10,20 @@ def log_execution():
         data = request.json
         user_id = data.get('userId')
 
-        # If user already exists, we update their logs
         if user_id in execution_logs:
             user_data = execution_logs[user_id]
-
-            # Check if the script type has been executed before and update accordingly
             script_name = data.get('scriptName')
             if script_name in user_data:
-                # If data exists and has changed, update it
                 if user_data[script_name] != data:
                     user_data[script_name] = data
             else:
-                # If the script name is new, add it
                 user_data[script_name] = data
-            
-            # Increment execution count for that script
             user_data[script_name]['executionCount'] = user_data[script_name].get('executionCount', 0) + 1
-
         else:
-            # New user, add them to the logs
             execution_logs[user_id] = {
                 data.get('scriptName'): {
                     **data,
-                    'executionCount': 1  # Set the initial execution count to 1
+                    'executionCount': 1
                 }
             }
 
@@ -52,35 +43,96 @@ def display_logs():
         <title>Execution Logs</title>
         <style>
             body {{
-                font-family: Arial, sans-serif;
-                margin: 20px;
+                font-family: 'Roboto', sans-serif;
+                background: linear-gradient(45deg, #1f1c2c, #4f4b5d);
+                color: #f5f5f5;
+                margin: 0;
                 padding: 0;
-                background-color: #f4f4f4;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                overflow: hidden;
             }}
             .container {{
-                max-width: 1000px;
-                margin: 0 auto;
-                background: white;
-                padding: 20px;
-                border-radius: 5px;
-                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                width: 100%;
+                max-width: 1200px;
+                background: rgba(0, 0, 0, 0.75);
+                border-radius: 16px;
+                padding: 30px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+                overflow-y: auto;
+                max-height: 85vh;
+                transition: all 0.3s ease;
             }}
             h1 {{
                 text-align: center;
+                color: #ff00ff;
+                font-size: 2.5em;
+                letter-spacing: 2px;
+                margin-bottom: 25px;
+                text-transform: uppercase;
+                font-weight: bold;
+                background: linear-gradient(45deg, #ff00ff, #4c6bff);
+                -webkit-background-clip: text;
+                color: transparent;
             }}
-            .log {{
-                border-bottom: 1px solid #ddd;
-                padding: 10px 0;
+            .user-log {{
+                background: #1b1b2f;
+                border-radius: 12px;
+                margin-bottom: 20px;
+                padding: 20px;
+                transition: transform 0.3s ease;
+                box-shadow: 0 0 20px rgba(0, 255, 255, 0.15);
+                position: relative;
+                cursor: pointer;
+                overflow: hidden;
             }}
-            .log:last-child {{
-                border-bottom: none;
+            .user-log:hover {{
+                transform: translateY(-10px);
+                box-shadow: 0 10px 30px rgba(0, 255, 255, 0.25);
             }}
-            .log pre {{
-                background: #eee;
+            .user-log h2 {{
+                font-size: 1.5em;
+                color: #00d4d4;
+                text-transform: uppercase;
+                margin-bottom: 10px;
+                font-weight: bold;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }}
+            .user-log h2 span {{
+                background: #ff00ff;
+                padding: 5px 12px;
+                border-radius: 8px;
+                font-size: 1.2em;
+            }}
+            .script-info {{
+                padding: 12px;
+                background: #25253b;
+                border-radius: 8px;
+                margin-bottom: 15px;
+                transition: background 0.3s ease;
+            }}
+            .user-log:hover .script-info {{
+                background: #333340;
+            }}
+            .script-info pre {{
+                background: #1f1f2b;
+                color: #a0a0a0;
+                border-radius: 8px;
                 padding: 10px;
-                border-radius: 5px;
-                overflow-x: auto;
                 white-space: pre-wrap;
+                word-wrap: break-word;
+                font-family: 'Courier New', Courier, monospace;
+                font-size: 1em;
+                overflow: auto;
+            }}
+            .execution-count {{
+                font-weight: bold;
+                color: #ff80e1;
+                margin-top: 8px;
             }}
         </style>
     </head>
@@ -98,19 +150,19 @@ def display_logs():
 def generate_logs_html():
     """Generates the HTML for execution logs dynamically."""
     if not execution_logs:
-        return "<p>No logs available.</p>"
-    
+        return "<p style='color: #ff80e1;'>No logs available yet.</p>"
+
     log_entries = ""
     for user_id, user_data in execution_logs.items():
         log_entries += f"""
-        <div class="log">
-            <h2>User ID: {user_id}</h2>
+        <div class="user-log">
+            <h2>User ID: {user_id} <span>{len(user_data)} Scripts Executed</span></h2>
         """
         for script_name, log in user_data.items():
             log_entries += f"""
-            <div class="log">
+            <div class="script-info">
                 <strong>Script Name:</strong> {script_name} <br>
-                <strong>Execution Count:</strong> {log['executionCount']} <br>
+                <div class="execution-count">Executed {log['executionCount']} times</div>
                 <strong>Experience:</strong> <pre>{log.get('experience', {})}</pre>
                 <strong>Experience HUD Increment:</strong> <pre>{log.get('experienceHudIncrement', {})}</pre>
                 <strong>Gamepasses:</strong> <pre>{log.get('gamepasses', {})}</pre>
