@@ -2,16 +2,44 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-execution_logs = []
+execution_logs = {}
 
 @app.route('/logExecution', methods=['POST'])
 def log_execution():
     try:
         data = request.json
-        execution_logs.append(data)
+        user_id = data.get('userId')
+
+        # If user already exists, we update their logs
+        if user_id in execution_logs:
+            user_data = execution_logs[user_id]
+
+            # Check if the script type has been executed before and update accordingly
+            script_name = data.get('scriptName')
+            if script_name in user_data:
+                # If data exists and has changed, update it
+                if user_data[script_name] != data:
+                    user_data[script_name] = data
+            else:
+                # If the script name is new, add it
+                user_data[script_name] = data
+            
+            # Increment execution count for that script
+            user_data[script_name]['executionCount'] = user_data[script_name].get('executionCount', 0) + 1
+
+        else:
+            # New user, add them to the logs
+            execution_logs[user_id] = {
+                data.get('scriptName'): {
+                    **data,
+                    'executionCount': 1  # Set the initial execution count to 1
+                }
+            }
+
         return jsonify({"status": "success", "message": "Data logged successfully."})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
+
 
 @app.route('/logs', methods=['GET'])
 def display_logs():
@@ -66,29 +94,37 @@ def display_logs():
     """
     return html_content
 
+
 def generate_logs_html():
     """Generates the HTML for execution logs dynamically."""
     if not execution_logs:
         return "<p>No logs available.</p>"
     
     log_entries = ""
-    for log in execution_logs:
+    for user_id, user_data in execution_logs.items():
         log_entries += f"""
         <div class="log">
-            <strong>User ID:</strong> {log.get('userId', 'N/A')} <br>
-            <strong>Username:</strong> {log.get('username', 'N/A')} <br>
-            <strong>Script Name:</strong> {log.get('scriptName', 'N/A')} <br>
-            <strong>Experience:</strong> <pre>{log.get('experience', {})}</pre>
-            <strong>Experience HUD Increment:</strong> <pre>{log.get('experienceHudIncrement', {})}</pre>
-            <strong>Gamepasses:</strong> <pre>{log.get('gamepasses', {})}</pre>
-            <strong>Mob Kills:</strong> <pre>{log.get('mobKills', {})}</pre>
-            <strong>Settings:</strong> <pre>{log.get('settings', {})}</pre>
-            <strong>Shop State:</strong> <pre>{log.get('shopState', {})}</pre>
-            <strong>Backpack Items:</strong> <pre>{log.get('backpack', {})}</pre>
-            <strong>Island Data:</strong> <pre>{log.get('islandData', {})}</pre>
-        </div>
+            <h2>User ID: {user_id}</h2>
         """
+        for script_name, log in user_data.items():
+            log_entries += f"""
+            <div class="log">
+                <strong>Script Name:</strong> {script_name} <br>
+                <strong>Execution Count:</strong> {log['executionCount']} <br>
+                <strong>Experience:</strong> <pre>{log.get('experience', {})}</pre>
+                <strong>Experience HUD Increment:</strong> <pre>{log.get('experienceHudIncrement', {})}</pre>
+                <strong>Gamepasses:</strong> <pre>{log.get('gamepasses', {})}</pre>
+                <strong>Mob Kills:</strong> <pre>{log.get('mobKills', {})}</pre>
+                <strong>Settings:</strong> <pre>{log.get('settings', {})}</pre>
+                <strong>Shop State:</strong> <pre>{log.get('shopState', {})}</pre>
+                <strong>Backpack Items:</strong> <pre>{log.get('backpack', {})}</pre>
+                <strong>Island Data:</strong> <pre>{log.get('islandData', {})}</pre>
+            </div>
+            """
+        log_entries += "</div>"
+
     return log_entries
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000, debug=True)
