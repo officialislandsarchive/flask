@@ -1,72 +1,88 @@
 import os
 import json
-from flask import Flask, request, jsonify, render_template_string
+import base64
+import requests
+from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# Directory to store user data
-DATA_DIR = "playerdata"
+GITHUB_REPO = "officialislandsarchive/flask"
+GITHUB_BRANCH = "main"
+GITHUB_TOKEN = os.environ.get("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")
 
-# Ensure the directory exists
-if not os.path.exists(DATA_DIR):
-    os.makedirs(DATA_DIR)
+API_BASE_URL = f"https://api.github.com/repos/{GITHUB_REPO}/contents/playerdata"
 
-# Helper functions to handle JSON file operations
-def load_user_data(user_id):
-    file_path = os.path.join(DATA_DIR, f"{user_id}.json")
-    if os.path.exists(file_path):
-        with open(file_path, "r") as file:
-            return json.load(file)
-    return None
 
-def save_user_data(user_id, data):
-    file_path = os.path.join(DATA_DIR, f"{user_id}.json")
-    with open(file_path, "w") as file:
-        json.dump(data, file, indent=4)
+def save_to_github(file_name, content):
+    file_url = f"{API_BASE_URL}/{file_name}"
 
-def load_all_users():
-    users = {}
-    for filename in os.listdir(DATA_DIR):
-        if filename.endswith(".json"):
-            user_id = filename[:-5]  # Remove the .json extension
-            users[user_id] = load_user_data(user_id)
-    return users
+    encoded_content = base64.b64encode(json.dumps(content, indent=4).encode()).decode()
 
-# Load all existing user data
-execution_logs = load_all_users()
+    headers = {
+        "Authorization": f"Bearer {GITHUB_TOKEN}",
+        "Content-Type": "application/json",
+    }
+    response = requests.get(file_url, headers=headers)
+
+    if response.status_code == 200:
+        sha = response.json()["sha"]
+        data = {
+            "message": f"Update {file_name}",
+            "content": encoded_content,
+            "sha": sha,
+            "branch": GITHUB_BRANCH,
+        }
+    else:
+        data = {
+            "message": f"Create {file_name}",
+            "content": encoded_content,
+            "branch": GITHUB_BRANCH,
+        }
+
+    save_response = requests.put(file_url, headers=headers, json=data)
+    if save_response.status_code in (200, 201):
+        print(f"Successfully saved {file_name} to GitHub.")
+        return True
+    else:
+        print(f"Failed to save {file_name} to GitHub: {save_response.json()}")
+        return False
+
 
 @app.route('/logExecution', methods=['POST'])
 def log_execution():
     try:
         data = request.json
-        user_id = data.get('userId')
-        username = data.get('username')
-        script_name = data.get('scriptName')
+        user_id = data.get("userId")
+        username = data.get("username")
+        script_name = data.get("scriptName")
 
         if not user_id or not username or not script_name:
             return jsonify({"status": "error", "message": "Missing userId, username, or scriptName."})
 
-        # Load or initialize the user's data
-        user_data = load_user_data(user_id) or {'username': username, 'scripts': {}}
+        user_data = {
+            "username": username,
+            "scripts": {}
+        }
+        file_name = f"{user_id}.json"
 
-        # Update script data
-        user_scripts = user_data['scripts']
-        if script_name in user_scripts:
-            user_scripts[script_name].update(data)
-            user_scripts[script_name]['executionCount'] = user_scripts[script_name].get('executionCount', 0) + 1
+        headers = {"Authorization": f"Bearer {GITHUB_TOKEN}"}
+        response = requests.get(f"{API_BASE_URL}/{file_name}", headers=headers)
+        if response.status_code == 200:
+            user_data = response.json()
+            user_data = json.loads(base64.b64decode(user_data["content"]).decode())
+
+        scripts = user_data["scripts"]
+        if script_name in scripts:
+            scripts[script_name]["executionCount"] = scripts[script_name].get("executionCount", 0) + 1
         else:
-            user_scripts[script_name] = {**data, 'executionCount': 1}
+            scripts[script_name] = {"executionCount": 1}
 
-        # Save updated user data
-        save_user_data(user_id, user_data)
-
-        # Update in-memory logs
-        execution_logs[user_id] = user_data
-
-        return jsonify({"status": "success", "message": "Data logged successfully."})
+        if save_to_github(file_name, user_data):
+            return jsonify({"status": "success", "message": "Data logged and saved to GitHub successfully."})
+        else:
+            return jsonify({"status": "error", "message": "Failed to save data to GitHub."})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
-
 
 @app.route('/logs', methods=['GET'])
 def display_logs():
