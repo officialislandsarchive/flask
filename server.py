@@ -119,20 +119,40 @@ def display_logs():
             margin-bottom: 20px;
         }
 
-        .script-section h3 {
-            color: #6c63ff;
-            margin-bottom: 10px;
-        }
-
-        .script-info {
-            margin-bottom: 10px;
-            padding: 15px;
+        .script-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            padding: 10px 15px;
             background: #3d3d5a;
-            border-left: 5px solid #6c63ff;
             border-radius: 5px;
+            transition: background 0.3s;
         }
 
-        .script-info p {
+        .script-header:hover {
+            background: #4b4b6e;
+        }
+
+        .script-header h3 {
+            margin: 0;
+            color: #6c63ff;
+        }
+
+        .script-header span {
+            font-size: 0.9em;
+            color: #bbb;
+        }
+
+        .script-details {
+            display: none;
+            padding: 15px;
+            background: #2b2b3d;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .script-details p {
             margin: 5px 0;
         }
     </style>
@@ -183,20 +203,33 @@ def display_logs():
             selectedUser.textContent = userId;
             selectedUsername.textContent = userData.username;
             scriptDetails.innerHTML = '';
-            const scripts = userData.scripts;
+            const scripts = Object.entries(userData.scripts).sort((a, b) => 
+                b[1].executionCount - a[1].executionCount || a[0].localeCompare(b[0])
+            );
 
-            for (const [scriptName, details] of Object.entries(scripts)) {
+            for (const [scriptName, details] of scripts) {
                 const sectionDiv = document.createElement('div');
                 sectionDiv.className = 'script-section';
-                sectionDiv.innerHTML = `<h3>${scriptName}</h3>`;
 
-                const scriptInfo = document.createElement('div');
-                scriptInfo.className = 'script-info';
-                scriptInfo.innerHTML = `
-                    <p><strong>Execution Count:</strong> ${details.executionCount}</p>
+                const header = document.createElement('div');
+                header.className = 'script-header';
+                header.innerHTML = `
+                    <h3>${scriptName}</h3>
+                    <span>${details.executionCount} executions</span>
+                `;
+                header.onclick = () => {
+                    const detailsDiv = sectionDiv.querySelector('.script-details');
+                    detailsDiv.style.display = detailsDiv.style.display === 'none' ? 'block' : 'none';
+                };
+
+                const detailsDiv = document.createElement('div');
+                detailsDiv.className = 'script-details';
+                detailsDiv.innerHTML = `
                     <p><strong>Data:</strong> <pre>${JSON.stringify(details, null, 2)}</pre></p>
                 `;
-                sectionDiv.appendChild(scriptInfo);
+
+                sectionDiv.appendChild(header);
+                sectionDiv.appendChild(detailsDiv);
                 scriptDetails.appendChild(sectionDiv);
             }
 
