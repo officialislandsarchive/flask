@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify, render_template_string
 
 app = Flask(__name__)
 
-# Simulated database for execution logs
 execution_logs = {}
 
 @app.route('/logExecution', methods=['POST'])
@@ -31,7 +30,7 @@ def log_execution():
         return jsonify({"status": "error", "message": str(e)})
 
 
-@app.route('/logs', methods=['GET'])
+@app.route('/dr09o8gvhve4984fh34348fh4308fjh4380fhj97gafo974tfy9o7wa4twyf798t4aw8o7rt4a87ofg974wgf8974w', methods=['GET'])
 def display_logs():
     return render_template_string("""
 <!DOCTYPE html>
